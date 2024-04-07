@@ -6,7 +6,6 @@ import RecipeCard from '../components/RecipeCard';
 const Find = () => {
 
   const [query, setQuery] = useState('');
-  const [result, setResult] = useState();
   const [loading, setLoading] = useState(false);
   const [searchedRecipes, setSearchedRecipes] = useState(null);
 
