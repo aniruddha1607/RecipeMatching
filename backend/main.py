@@ -1,234 +1,191 @@
-# search using nutrients
-# Show similar nutrient meals
-# show similar cuisine, mealType
-
 APPID = '1283c1ab'
 APPLICATIONKEY = '6ed575d941bbbea2d4e50379f436c326'
 URL = 'https://api.edamam.com/api/recipes/v2'
 
+# https://api.edamam.com/api/recipes/v2?app_key=6ed575d941bbbea2d4e50379f436c326&_cont=CHcVQBtNNQphDmgVQntAEX4BY0t0DAACRGZFCmIRZFx6AwECUXlSVmEUYgRzAgtTFTBDUmURMAB6BFECF2xCCmdHNgBwAVUVLnlSVSBMPkd5BgNK&app_id=1283c1ab&q=noodles
+
 from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
+import csv
+import pandas as pd
+import numpy as np
+import re
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import NearestNeighbors
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.model_selection import train_test_split
+import mysql.connector
 
 
 app = Flask(__name__)
+# db = mysql.connector.connect(
+#     host='localhost',
+#     database = 'recipe',
+#     user = 'root'
+# )
 CORS(app)
 
-@app.route('/query', methods=['GET'])
-def recipe_search():
-    # data = request.json
-    # recipe = data['recipe']
-    recipe = request.args.get('recipe')
+@app.route('/find', methods=['GET'])
+def search_recipe():
+    query = request.args['q']
 
-    def keyword_call(query):
-        api_url = URL
+    response = requests.get(f"{URL}?app_key={APPLICATIONKEY}&app_id={APPID}&q={query}&type=any")
+    if response.status_code == 200:
+        data = response.json()
+        searched_recipes = []
+        for i in range(20):
+            searched_recipes.append(data['hits'][i]['recipe'])
+        print(searched_recipes)
+        return jsonify({'searched_recipes': searched_recipes})
+    else:
+        print(f"error {response.status_code}")
 
-        params = {
-            'app_id': APPID,
-            'app_key': APPLICATIONKEY,
-            'type': 'any',
-            'q': query
-        }
 
-        try:
-            response = requests.get(api_url, params=params)
-            if response.status_code == 200:
-                data = response.json()
 
-                cuisineArrayArray = []
-                searchedRecipes = []
+CORS(app)
+@app.route('/predict')
+def predict_recipe():
+    mealType = request.args['mealType']
+    if "/" in mealType:
+        mealType = mealType.split("/")[0]
 
-                for x in range(20):
-                    searchedRecipes.append(data['hits'][x]['recipe'])
-                    cuisineArrayArray.append(data['hits'][x]['recipe']['cuisineType'])
+    print(mealType[0])
+    print(f"mealType is {mealType}")
+    input_protein = int(request.args.get('protein'))
+    input_fat = int(request.args.get('fat'))
+    input_energy = int(request.args.get('energy'))
+    input_carbs = int(request.args.get('carbs'))
+    input_fibres = int(request.args.get('fibres'))
+    response = requests.get(f"{URL}?app_key={APPLICATIONKEY}&app_id={APPID}&mealType={mealType}&type=any")
 
-                return cuisineArrayArray, searchedRecipes
+    if response.status_code == 200:
+        data = response.json()
+        suggested_recipes1 = []
+        for i in range(20):
+            suggested_recipes1.append(data['hits'][i]['recipe'])
 
+        for _ in range(20):
+            if( data['_links']['next']['href']):
+                response = requests.get(data['_links']['next']['href'])
+                if response.status_code == 200:
+                    data = response.json()
+                    for i in range(20):
+                        suggested_recipes1.append(data['hits'][i]['recipe'])
+                else:
+                    print(f"error {response.status_code}")
             else:
-                print("error:", response.status_code)
-        except requests.exceptions.RequestException as e:
-            print("error:", e)
+                break
 
-    def extract_cuisineType_CallApi(arr):
+        print('result returned')
 
-        count_dict = {}
+        print(len(suggested_recipes1))
+        labels = []
+        protein = []
+        fat = []
+        energy = []
+        carbs = []
+        fibres = []
+        image_url = []
+        ingridients = []
+        mealtype = []
+        url = []
+        cuisinetype = []
 
-        for string in arr:
-            if string in count_dict:
-                count_dict[string] += 1
-            else:
-                count_dict[string] = 1
+        for i in range(len(suggested_recipes1)):
+            try:
+                labels.append(suggested_recipes1[i]['label'])
+                protein.append(suggested_recipes1[i]['totalNutrients']['PROCNT']['quantity'])
+                fat.append(suggested_recipes1[i]['totalNutrients']['FAT']['quantity'])
+                energy.append(suggested_recipes1[i]['totalNutrients']['ENERC_KCAL']['quantity'])
+                carbs.append(suggested_recipes1[i]['totalNutrients']['CHOCDF']['quantity'])
+                fibres.append(suggested_recipes1[i]['totalNutrients']['FIBTG']['quantity'])
+                image_url.append(suggested_recipes1[i]['image'])
+                ingridients.append(suggested_recipes1[i]['ingredientLines'])
+                mealtype.append(suggested_recipes1[i]['mealType'])
+                url.append(suggested_recipes1[i]['url'])
+                cuisinetype.append(suggested_recipes1[i]['cuisineType'])
+            except:
+                print("This row is not appended")
 
-        max_count = 0
-        most_frequent = None
+        print('appended in list')
 
-        for string, count in count_dict.items():
-            if count > max_count:
-                max_count = count
-                most_frequent = string
+        for x in range(len(ingridients)):
+            print(ingridients[x])
 
-        print('\n' + 'explore more similar ' + most_frequent + ' dishes')
+        db_columns = zip(labels, protein, fat, energy, carbs, fibres, image_url, ingridients, mealtype, url, cuisinetype)
 
-        params = {
-            'app_id': APPID,
-            'app_key': APPLICATIONKEY,
-            'type': 'any',
-            'cuisineType': most_frequent
-        }
+        csv_file_path = 'dataset.csv'
+        with open(csv_file_path, 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
 
-        try:
-            response = requests.get(URL, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                suggestedCusineRecipes = []
-                for x in range(20):
-                    suggestedCusineRecipes.append(data['hits'][x]['recipe'])
-                return suggestedCusineRecipes, most_frequent
-            else:
-                print("error:", response.status_code)
-        except requests.exceptions.RequestException as e:
-            print("error:", e)
+            writer.writerow(['Name', 'Protein', 'Fats', 'Energy', 'Carbs', 'Fibres', 'image_url', 'ingridients', 'mealtype', 'url', 'cuisinetype'])
 
-    cusine_array, searchedRecipes = keyword_call(recipe)
-    cusineStringArray = [string for sub_array in cusine_array for string in sub_array]
-    suggestedCusineRecipes, suggestedCuisine = extract_cuisineType_CallApi(cusineStringArray)
+            for row in db_columns:
+                try:
+                    writer.writerow(row)
+                except:
+                    print('encoding error')
+                    continue
+        print('csv created')
 
-    response = jsonify({'searchedRecipes': searchedRecipes, 'suggestedCusineRecipes' : suggestedCusineRecipes,
-                    'suggestedCuisine': suggestedCuisine})
+        df = pd.read_csv('dataset.csv', encoding='cp1252')
+        neigh = NearestNeighbors(n_neighbors=2)
+        neigh.fit(df.iloc[:, 1:6].to_numpy())
+        nearest_recipes = neigh.kneighbors([[input_protein, input_fat, input_energy, input_carbs, input_fibres]], 10, return_distance=False)
 
-    return response
+        indices = nearest_recipes[0]
+        df2 = df.iloc[indices, :]
+        result_list = df2.values.tolist()
 
-@app.route('/suggestRelated', methods=['GET'])
-def suggest_recipes():
-    cuisineType = request.args.get('cuisineType')
-    print(cuisineType)
+        result_json = []
 
-    def keyword_call(cuisineType):
-        api_url = URL
-        params = {
-            'app_id': APPID,
-            'app_key': APPLICATIONKEY,
-            'type': 'any',
-            'cuisineType': cuisineType
-        }
+        for point in result_list:
+            recipe = {
+                "label" : point[0],
+                "totalNutrients": {
+                  "PROCNT": {
+                    "label": "Protein",
+                    "quantity": point[1],
+                    "unit": "g"
+                  },
+                  "FAT": {
+                    "label": "Fat",
+                    "quantity": point[2],
+                    "unit": "g"
+                  },
+                  "ENERC_KCAL": {
+                    "label": "Energy",
+                    "quantity": point[3],
+                    "unit": "kcal"
+                  },
+                  "CHOCDF": {
+                        "label": "Carbs",
+                        "quantity": point[4],
+                        "unit": "g"
+                  },
+                  "FIBTG": {
+                        "label": "Fiber",
+                        "quantity": point[5],
+                        "unit": "g"
+                  },
+                 },
+                "image" : point[6],
+                "ingredientLines" : eval(point[7]),
+                "mealType": eval(point[8]),
+                "url": point[9],
+                "cuisineType": eval(point[10])
+            }
+            result_json.append(recipe)
 
-        try:
-            response = requests.get(api_url, params=params)
-            if response.status_code == 200:
-                data = response.json()
+        print(result_json)
 
-                suggestedRecipes = []
+        return result_json
 
-                for x in range(20):
-                    suggestedRecipes.append(data['hits'][x]['recipe'])
-
-                return suggestedRecipes
-
-            else:
-                print("error:", response.status_code)
-        except requests.exceptions.RequestException as e:
-            print("error:", e)
-
-
-    suggestedRecipes = keyword_call(cuisineType)
-
-    response = jsonify({'suggestedRecipes': suggestedRecipes})
-
-    return response
-
-@app.route('/suggestByCalories', methods=['GET'])
-def suggest_recipes_calories():
-    calories = request.args.get('calories')
-    dishType = request.args.get('dishType')
-    print(calories)
-    calories = int(calories)
-    calories_min = str(calories - 150)
-    calories_max = str(calories + 150)
-
-
-    def keyword_call():
-        api_url = URL
-        params = {
-            'app_id': APPID,
-            'app_key': APPLICATIONKEY,
-            'type': 'any',
-            'calories': f'{calories_min}-{calories_max}',
-            'dishType': dishType
-        }
-
-        try:
-            response = requests.get(api_url, params=params)
-            if response.status_code == 200:
-                data = response.json()
-
-                suggestedByCalories = []
-
-                for x in range(20):
-                    suggestedByCalories.append(data['hits'][x]['recipe'])
-
-                return suggestedByCalories
-
-            else:
-                print("error:", response.status_code)
-        except requests.exceptions.RequestException as e:
-            print("error:", e)
-
-
-    suggestedByCalories = keyword_call()
-
-    response = jsonify({'suggestedByCalories': suggestedByCalories})
-
-    return response
-
-@app.route('/suggestByNutrients', methods=['GET'])
-def suggest_recipes_nutrients():
-    protein = int(request.args.get('protein'))
-    fat = int(request.args.get('fat'))
-    energy = int(request.args.get('energy'))
-    carbs = int(request.args.get('carbs'))
-    fibres = int(request.args.get('fibres'))
-    print(protein)
-
-    def keyword_call():
-        api_url = URL
-        params = {
-            'app_id': APPID,
-            'app_key': APPLICATIONKEY,
-            'type': 'any',
-            'nutrients[PROCNT]': f'{protein-150}-{protein+150}',
-            'nutrients[FAT]': f'{fat-150}-{fat+150}',
-            'nutrients[ENERC_KCAL]': f'{energy-150}-{energy+150}',
-            'nutrients[CHOCDF]': f'{carbs-150}-{carbs+150}',
-            'nutrients[FIBTG]': f'{fibres-150}-{fibres+150}',
-        }
-
-        try:
-            response = requests.get(api_url, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                suggestedByNutrients = []
-                for x in range(20):
-                    suggestedByNutrients.append(data['hits'][x]['recipe'])
-                return suggestedByNutrients
-            else:
-                print("error:", response.status_code)
-        except requests.exceptions.RequestException as e:
-            print("error:", e)
-
-    suggestedByNutrients = keyword_call()
-    response = jsonify({'suggestedByNutrients': suggestedByNutrients})
-    return response
+    else :
+        print(f"error {response.status_code}")
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
-
-
-# cusine_array = keyword_call('butter chicken')
-#
-# cusineStringArray = [string for sub_array in cusine_array for string in sub_array]
-# extract_cuisineType_CallApi(cusineStringArray)
