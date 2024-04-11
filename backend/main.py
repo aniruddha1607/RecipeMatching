@@ -2,189 +2,171 @@ APPID = '1283c1ab'
 APPLICATIONKEY = '6ed575d941bbbea2d4e50379f436c326'
 URL = 'https://api.edamam.com/api/recipes/v2'
 
-# https://api.edamam.com/api/recipes/v2?app_key=6ed575d941bbbea2d4e50379f436c326&_cont=CHcVQBtNNQphDmgVQntAEX4BY0t0DAACRGZFCmIRZFx6AwECUXlSVmEUYgRzAgtTFTBDUmURMAB6BFECF2xCCmdHNgBwAVUVLnlSVSBMPkd5BgNK&app_id=1283c1ab&q=noodles
-
 from flask import Flask, request, jsonify
-import requests
 from flask_cors import CORS
-import csv
-import pandas as pd
 import numpy as np
-import re
-from sklearn.preprocessing import StandardScaler
-from sklearn.neighbors import NearestNeighbors
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.model_selection import train_test_split
-import mysql.connector
-
+from pymongo import MongoClient
+import pickle
 
 app = Flask(__name__)
-# db = mysql.connector.connect(
-#     host='localhost',
-#     database = 'recipe',
-#     user = 'root'
-# )
 CORS(app)
 
-@app.route('/find', methods=['GET'])
+@app.route('/find', methods=['POST', 'GET'])
 def search_recipe():
-    query = request.args['q']
+    cluster = "mongodb://localhost:27017/"
+    client = MongoClient(cluster)
+    db = client.recipeDB
+    recipe = db.recipe
 
-    response = requests.get(f"{URL}?app_key={APPLICATIONKEY}&app_id={APPID}&q={query}&type=any")
-    if response.status_code == 200:
-        data = response.json()
-        searched_recipes = []
-        for i in range(20):
-            searched_recipes.append(data['hits'][i]['recipe'])
-        print(searched_recipes)
-        return jsonify({'searched_recipes': searched_recipes})
-    else:
-        print(f"error {response.status_code}")
+    data = request.json
 
+    def build_fetch(key_list, fetch):
+        for key, value in key_list.items():
+            if(data[value]):
+                fetch.update({key: 1})
 
+    fetch = {}
+    key_list = {"Balanced":"balanced",
+                "High-Protein":"protein",
+                "Low-Fat":"fat",
+                "Low-Carb": "carb",
+                "High-Fiber": "fiber",
+                "Low-Sodium": "sodium"}
+
+    build_fetch(key_list, fetch)
+
+    print(fetch)
+
+    result_json = []
+    results = recipe.find(fetch)
+    for result in results:
+        recipe = {
+            "label": result['Name'],
+            "totalNutrients": {
+                "PROCNT": {
+                    "label": "Protein",
+                    "quantity": result['Protein'],
+                    "unit": "g"
+                },
+                "FAT": {
+                    "label": "Fat",
+                    "quantity":result['Fats'],
+                    "unit": "g"
+                },
+                "ENERC_KCAL": {
+                    "label": "Energy",
+                    "quantity": result['Energy'],
+                    "unit": "kcal"
+                },
+                "CHOCDF": {
+                    "label": "Carbs",
+                    "quantity": result['Carbs'],
+                    "unit": "g"
+                },
+                "FIBTG": {
+                    "label": "Fiber",
+                    "quantity": result['Fibres'],
+                    "unit": "g"
+                },
+            },
+            "image": result['image_url'],
+            "ingredientLines": eval(result['ingridients']),
+            "mealType": result['mealtype'],
+            "url": result['url'],
+            "cuisineType": result['cuisinetype'],
+            "id": result["id"]
+        }
+        result_json.append(recipe)
+
+    # print(result_json)
+
+    return jsonify({'searched_recipes': result_json})
 
 CORS(app)
-@app.route('/predict')
+@app.route('/predict', methods=['POST', 'GET'])
 def predict_recipe():
-    mealType = request.args['mealType']
-    if "/" in mealType:
-        mealType = mealType.split("/")[0]
+    cluster = "mongodb://localhost:27017/"
+    client = MongoClient(cluster)
+    db = client.recipeDB
+    recipe = db.recipe
 
-    print(mealType[0])
-    print(f"mealType is {mealType}")
-    input_protein = int(request.args.get('protein'))
-    input_fat = int(request.args.get('fat'))
-    input_energy = int(request.args.get('energy'))
-    input_carbs = int(request.args.get('carbs'))
-    input_fibres = int(request.args.get('fibres'))
-    response = requests.get(f"{URL}?app_key={APPLICATIONKEY}&app_id={APPID}&mealType={mealType}&type=any")
+    # id = int(request.args.get('id'))
+    data = request.json
+    id = data['id']
+    print(f"id is {id}")
 
-    if response.status_code == 200:
-        data = response.json()
-        suggested_recipes1 = []
-        for i in range(20):
-            suggested_recipes1.append(data['hits'][i]['recipe'])
+    result = recipe.find_one({"id": id})
+    print(result["Protein"])
 
-        for _ in range(20):
-            if( data['_links']['next']['href']):
-                response = requests.get(data['_links']['next']['href'])
-                if response.status_code == 200:
-                    data = response.json()
-                    for i in range(20):
-                        suggested_recipes1.append(data['hits'][i]['recipe'])
-                else:
-                    print(f"error {response.status_code}")
-            else:
-                break
+    # will be used as gives perfect results
+    nutrient_array = [result["Protein"], result['Fats'], result['Energy'], result['Carbs'], result['Fibres']]
+    print(nutrient_array)
 
-        print('result returned')
+    # create array for mealtype of the selected recipe - not used due to bad predictions
+    # meal_array = []
+    # for column_name in df.columns[12:17]:
+    #     meal_array.append(column_name)
+    # specific_row = df['mealtype'][id]
+    # result_meal_array = [1 if category in specific_row else 0 for category in meal_array]
+    # print(result_meal_array)
 
-        print(len(suggested_recipes1))
-        labels = []
-        protein = []
-        fat = []
-        energy = []
-        carbs = []
-        fibres = []
-        image_url = []
-        ingridients = []
-        mealtype = []
-        url = []
-        cuisinetype = []
+    # create array for cuisinetype of the selected recipe - not used due to bad predictions
+    # cuisine_array = []
+    # for column_name in df.columns[17:38]:
+    #     cuisine_array.append(column_name)
+    # specific_row = df['cuisinetype'][id]
+    # result_cuisine_array = [1 if category in specific_row else 0 for category in cuisine_array]
+    # print(result_cuisine_array)
 
-        for i in range(len(suggested_recipes1)):
-            try:
-                labels.append(suggested_recipes1[i]['label'])
-                protein.append(suggested_recipes1[i]['totalNutrients']['PROCNT']['quantity'])
-                fat.append(suggested_recipes1[i]['totalNutrients']['FAT']['quantity'])
-                energy.append(suggested_recipes1[i]['totalNutrients']['ENERC_KCAL']['quantity'])
-                carbs.append(suggested_recipes1[i]['totalNutrients']['CHOCDF']['quantity'])
-                fibres.append(suggested_recipes1[i]['totalNutrients']['FIBTG']['quantity'])
-                image_url.append(suggested_recipes1[i]['image'])
-                ingridients.append(suggested_recipes1[i]['ingredientLines'])
-                mealtype.append(suggested_recipes1[i]['mealType'])
-                url.append(suggested_recipes1[i]['url'])
-                cuisinetype.append(suggested_recipes1[i]['cuisineType'])
-            except:
-                print("This row is not appended")
+    print(f"nutrients{np.array(nutrient_array).reshape(1, -1)}")
+    model = pickle.load(open('recipemodel','rb'))
 
-        print('appended in list')
+    nearest_recipes = model.kneighbors(np.array(nutrient_array).reshape(1, -1), 10, return_distance=False)
+    indices = nearest_recipes[0]
+    print(indices)
+    ids = indices.tolist()
+    result_json =[]
+    similar = recipe.find({"id": {"$in": ids}})
 
-        for x in range(len(ingridients)):
-            print(ingridients[x])
-
-        db_columns = zip(labels, protein, fat, energy, carbs, fibres, image_url, ingridients, mealtype, url, cuisinetype)
-
-        csv_file_path = 'dataset.csv'
-        with open(csv_file_path, 'w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-
-            writer.writerow(['Name', 'Protein', 'Fats', 'Energy', 'Carbs', 'Fibres', 'image_url', 'ingridients', 'mealtype', 'url', 'cuisinetype'])
-
-            for row in db_columns:
-                try:
-                    writer.writerow(row)
-                except:
-                    print('encoding error')
-                    continue
-        print('csv created')
-
-        df = pd.read_csv('dataset.csv', encoding='cp1252')
-        neigh = NearestNeighbors(n_neighbors=2)
-        neigh.fit(df.iloc[:, 1:6].to_numpy())
-        nearest_recipes = neigh.kneighbors([[input_protein, input_fat, input_energy, input_carbs, input_fibres]], 10, return_distance=False)
-
-        indices = nearest_recipes[0]
-        df2 = df.iloc[indices, :]
-        result_list = df2.values.tolist()
-
-        result_json = []
-
-        for point in result_list:
-            recipe = {
-                "label" : point[0],
-                "totalNutrients": {
-                  "PROCNT": {
+    for result in similar:
+        recipe = {
+            "label": result['Name'],
+            "totalNutrients": {
+                "PROCNT": {
                     "label": "Protein",
-                    "quantity": point[1],
+                    "quantity": result['Protein'],
                     "unit": "g"
-                  },
-                  "FAT": {
+                },
+                "FAT": {
                     "label": "Fat",
-                    "quantity": point[2],
+                    "quantity":result['Fats'],
                     "unit": "g"
-                  },
-                  "ENERC_KCAL": {
+                },
+                "ENERC_KCAL": {
                     "label": "Energy",
-                    "quantity": point[3],
+                    "quantity": result['Energy'],
                     "unit": "kcal"
-                  },
-                  "CHOCDF": {
-                        "label": "Carbs",
-                        "quantity": point[4],
-                        "unit": "g"
-                  },
-                  "FIBTG": {
-                        "label": "Fiber",
-                        "quantity": point[5],
-                        "unit": "g"
-                  },
-                 },
-                "image" : point[6],
-                "ingredientLines" : eval(point[7]),
-                "mealType": eval(point[8]),
-                "url": point[9],
-                "cuisineType": eval(point[10])
-            }
-            result_json.append(recipe)
-
-        print(result_json)
-
-        return result_json
-
-    else :
-        print(f"error {response.status_code}")
+                },
+                "CHOCDF": {
+                    "label": "Carbs",
+                    "quantity": result['Carbs'],
+                    "unit": "g"
+                },
+                "FIBTG": {
+                    "label": "Fiber",
+                    "quantity": result['Fibres'],
+                    "unit": "g"
+                },
+            },
+            "image": result['image_url'],
+            "ingredientLines": eval(result['ingridients']),
+            "mealType": result['mealtype'],
+            "url": result['url'],
+            "cuisineType": result['cuisinetype'],
+            "id": result["id"]
+        }
+        result_json.append(recipe)
+    return result_json
 
 
 if __name__ == '__main__':
