@@ -4,6 +4,7 @@ import RecipeDetailCard from '../components/RecipeDetailCard';
 import RecipeCard from '../components/RecipeCard';
 import { Link } from 'react-router-dom';
 
+
 const Suggest = () => {
   const { state } = useLocation();
   const recipe = state?.recipe;
@@ -16,23 +17,24 @@ const Suggest = () => {
     event.preventDefault();
     setLoading(true);
     setError(false);
-    const protein = Math.floor( recipe.totalNutrients.PROCNT.quantity );
-    const fat = Math.floor( recipe.totalNutrients.FAT.quantity );
-    const energy = Math.floor( recipe.totalNutrients.ENERC_KCAL.quantity );
-    const carbs = Math.floor( recipe.totalNutrients.CHOCDF.quantity );
-    const fibers = Math.floor( recipe.totalNutrients.FIBTG.quantity );
-    const mealType = recipe.mealType[0]
-    console.log(fat)
-    console.log(mealType)
-    const url = `http://localhost:5000/predict?mealType=${encodeURIComponent(mealType)}&protein=${encodeURIComponent(protein)}&fat=${encodeURIComponent(fat)}&energy=${encodeURIComponent(energy)}&carbs=${encodeURIComponent(carbs)}&fibres=${encodeURIComponent(fibers)}`;
+    console.log("id is" + recipe.id)
+
     try {
-      const response = await fetch(url);
+      console.log(recipe.id)
+      const response = await fetch("http://localhost:5000/predict", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id: recipe.id})
+      })
       const data = await response.json();
       setResult(data)
       setLoading(false)
       console.log(data[0])
-    } catch (error) {
-      console.log(error)
+    
+    } catch(error) {
+      console.log(error);
       setError(true);
     }
     
