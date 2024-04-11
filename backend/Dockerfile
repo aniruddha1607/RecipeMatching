@@ -2,6 +2,8 @@ FROM python:3
 
 WORKDIR /app
 
+EXPOSE 5000
+
 ENV FLASK_APP=main.py
 
 COPY ./requirements.txt .

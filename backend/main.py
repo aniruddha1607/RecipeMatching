@@ -2,22 +2,38 @@ APPID = '1283c1ab'
 APPLICATIONKEY = '6ed575d941bbbea2d4e50379f436c326'
 URL = 'https://api.edamam.com/api/recipes/v2'
 
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from pymongo import MongoClient
 import pickle
+import pandas as pd
+from database import save_dataset_to_mongodb
+
+# Add MongoDB connection details
+mongodb_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
+mongodb_database = os.getenv("MONGODB_DATABASE", "recipeDB")
+mongodb_collection = "recipe"
+mongo_data = "cleaned.csv"
+
+# Save the dataset to MongoDB
+save_dataset_to_mongodb(mongo_data, mongodb_url, mongodb_database, mongodb_collection)
+
+client = MongoClient(mongodb_url)
+db = client.recipeDB
 
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/')
+def home():
+    return ("hello world")
+
 @app.route('/find', methods=['POST', 'GET'])
 def search_recipe():
-    cluster = "mongodb://localhost:27017/"
-    client = MongoClient(cluster)
-    db = client.recipeDB
-    recipe = db.recipe
 
+    recipe = db.recipe
     data = request.json
 
     def build_fetch(key_list, fetch):
@@ -85,9 +101,6 @@ def search_recipe():
 CORS(app)
 @app.route('/predict', methods=['POST', 'GET'])
 def predict_recipe():
-    cluster = "mongodb://localhost:27017/"
-    client = MongoClient(cluster)
-    db = client.recipeDB
     recipe = db.recipe
 
     # id = int(request.args.get('id'))
@@ -170,4 +183,4 @@ def predict_recipe():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0')
