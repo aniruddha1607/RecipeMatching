@@ -1,3 +1,11 @@
+Nutrient Pro
+- Search over 3000 recipes with this application
+- Search queries based on Nutrients 
+- Find all the statistics for the recipe from the composition to nutrients and even the cusine where the recipe is used
+- Find the best recipe that matches your dietery requirements, through suggestions based on searched recipe
+- Finally view detailed information on how to prepare the recipe 
+
+
 Tech Stack
 1. Frontned
 - JavaScript (ReactJS)
@@ -29,14 +37,16 @@ Preprocessing
 
 Applying the Model
 - I found Nearest Neighbours algorithm to be the best fit for calculating similarity of recipes based on several artcles
-- cite articles hhere --------
+- https://epub.uni-regensburg.de/23901/1/pervasivehealth.pdf
 - Initialy the Nearest Neighbours algorithm was applied to 5 Nutrient columns as mentioned in preprocessing and also the label encoded columns/categories of mealtype and cuisinetype were taken into consideration
 - But this dataset was giving inconsistent results as it also tried to match the type of meal and the cuisine, so focus was shifted from the nutrients - In Layman terms, similar recipes for high protein recipes did not always contain high protein recipes, but some low protein ones too which matched the cuisine (eg - american) of the parent recipe
 - The point of this app was to give recipes with similar nutrients and calories, so only the 5 nutrient columns were now used to train the nearest neighbour algorithm which was giving promising results and atleast 8 out of 10 recipes were having similar amount of nutrients.
 - Nearest neighbour parameter of 5 was used while training the model as it didnt underfit not overfit the model
 - This second model was saved using pickle and then is used in the backend to make predictions
 
-
+Explore the ipynb file
+- Open the ipynb file present in the backend in google colab and execute each cell to do everything from creating dataset to preprocessing it and applying the model and saving it
+- Information about all the steps is given as comments in the ipynb file
 
 API Documentation
 
@@ -56,6 +66,7 @@ API Documentation
 
 To run the application
 - Download the code from github
+- Install docker desktop
 - Open terminal inside the parent directory(RecipeMatching)
 - run command -> docker-compose up -build
 - go to localhost:3000 and you have the app up and running!
