@@ -4,7 +4,7 @@
 
 - [Introduction](#introduction)
 - [Tech Stack](#tech-stack)
-- [Api Documentation](#api-doc)
+- [Api Documentation](#api-documentation)
 - [Building ML Model](#ml-model)
 - [Flow Diagram](#flow-diagram)
 - [Run The Application](https://github.com/aniruddha1607/RecipeMatching/blob/main/Run.md)
@@ -51,9 +51,9 @@
 - Returns the response JSON
 
 
-## Building ML Model
+## ML Model
 
-### Data (Preprocessing and applying Algorithm) / Model Creation
+### Data
 - The data was initially being fetched from EDMAMS API at runtime, but this was leading to an increased processing time, So I created my own dataset from the API
 - API link - https://developer.edamam.com/edamam-docs-recipe-api
 - The data was created by iteratively calling the API inside a for loop with different parameters according to the dishType ( wether it is a lunch, breakfast, dinner, snack or a teatime)
@@ -81,7 +81,7 @@
 - Information about all the steps is given as comments in the ipynb file
 
 
-## Flow Diagram of the Application
+## Flow Diagram
 
 ### /Find Route
 
