@@ -83,7 +83,16 @@
 
 ## Flow Diagram of the Application
 
+### /Find Route
 
+![FindFlow](https://github.com/aniruddha1607/RecipeMatching/blob/main/Images/LandingPage.png)
+
+### /Predict Route
+
+![SuggestFlow](https://github.com/aniruddha1607/RecipeMatching/blob/main/Images/LandingPage.png)
+- Note here, between backend and database, in first access paramaters of current recipe (The Recipe ID sent by the User) is fetched to further send it to the ML Model
+- In Second Access Suggested Recipes are returned as per the indices predicted by the ML Model
+- The Indices (Location in the csv file used for training) and Ids in database are same for each recipe
 
 
 

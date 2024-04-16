@@ -20,7 +20,7 @@
 ![DetailPage](https://github.com/aniruddha1607/RecipeMatching/blob/main/Images/RecipeDetail.png)
 
 - The detail page will show all the information and statistics of the Food/Recipe
-- The User can click on 'Find Similar Recipes' and recipes with similar nutrient content will be recommended
+- The User can click on 'Find Similar Recipes' and recipes with similar nutrient content recipes will be recommended
 - The User can click on 'View Detailed Instructions' to get the steps for making the Recipe
 - The User can click on 'Search' to go back to search page where Recipes can be searched with filters
 
