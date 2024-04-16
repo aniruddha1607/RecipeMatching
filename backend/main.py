@@ -115,21 +115,6 @@ def predict_recipe():
     nutrient_array = [result["Protein"], result['Fats'], result['Energy'], result['Carbs'], result['Fibres']]
     print(nutrient_array)
 
-    # create array for mealtype of the selected recipe - not used due to bad predictions
-    # meal_array = []
-    # for column_name in df.columns[12:17]:
-    #     meal_array.append(column_name)
-    # specific_row = df['mealtype'][id]
-    # result_meal_array = [1 if category in specific_row else 0 for category in meal_array]
-    # print(result_meal_array)
-
-    # create array for cuisinetype of the selected recipe - not used due to bad predictions
-    # cuisine_array = []
-    # for column_name in df.columns[17:38]:
-    #     cuisine_array.append(column_name)
-    # specific_row = df['cuisinetype'][id]
-    # result_cuisine_array = [1 if category in specific_row else 0 for category in cuisine_array]
-    # print(result_cuisine_array)
 
     print(f"nutrients{np.array(nutrient_array).reshape(1, -1)}")
     model = pickle.load(open('recipemodel','rb'))
