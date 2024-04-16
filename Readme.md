@@ -6,8 +6,9 @@
 - [Tech Stack](#tech-stack-used)
 - [Api Documentation](#api-doc)
 - [Building ML Model](#ml-model)
-- [Run The Application](#steps-to-run-the-app)
-- [Usage Flow](#usage)
+- [Flow Diagram](#flow-diagram)
+- [Run The Application](https://github.com/aniruddha1607/RecipeMatching/blob/main/Run.md)
+- [User Flow](https://github.com/aniruddha1607/RecipeMatching/blob/main/UserFlow.md)
 
 
 
@@ -23,7 +24,7 @@
 
 ## Tech Stack
 
-1. Frontned
+1. Frontend
 - JavaScript (ReactJS)
 - TailwindCSS for styling
 
@@ -76,8 +77,13 @@
 - This second model was saved using pickle and then is used in the backend to make predictions
 
 ### Explore the ipynb file
-- Open the ipynb file present in the backend in google colab and execute each cell to do everything from creating dataset to preprocessing it and applying the model and saving it
+- Open the ipynb file (https://github.com/aniruddha1607/RecipeMatching/blob/main/backend/RecipeDatabase.ipynb) present in the backend in google colab and execute each cell to do everything from creating dataset to preprocessing it and applying the model and saving it
 - Information about all the steps is given as comments in the ipynb file
+
+
+## Flow Diagram of the Application
+
+
 
 
 
