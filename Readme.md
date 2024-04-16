@@ -3,7 +3,7 @@
 ## Index
 
 - [Introduction](#introduction)
-- [Tech Stack](#tech-stack-used)
+- [Tech Stack](#tech-stack)
 - [Api Documentation](#api-doc)
 - [Building ML Model](#ml-model)
 - [Flow Diagram](#flow-diagram)
